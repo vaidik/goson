@@ -11,7 +11,7 @@ import (
 )
 
 type loopTuple struct {
-    Foreach, Asitem string
+    ForEach, AsItem string
 }
 
 func zip(a, b []string) ([]loopTuple, error) {
@@ -33,7 +33,7 @@ func main() {
         log.Fatal("Failed to read input from stdin.")
     }
 
-    parsed_json, err := gabs.ParseJSON(bytes)
+    parsed_obj, err := gabs.ParseJSON(bytes)
     if err != nil {
         log.Fatal("Failed to parse input.")
     }
@@ -70,12 +70,11 @@ func main() {
                     log.Fatal("Number of foreach(s) and asitems(s) should match.")
                 }
 
-                returned := runForEach(parsed_json, loopTuples)
-                returnedArray, _ := returned.Children()
+                printableObj := runForEach(parsed_obj, loopTuples)
+                printableArr, _ := printableObj.Children()
 
-                for _, element := range returnedArray {
-                    response := element.Path(c.Args().First())
-                    fmt.Println(response.String())
+                for _, element := range printableArr {
+                    fmt.Println(element.Path(c.Args().First()).String())
                 }
             },
         },
@@ -88,17 +87,27 @@ func runForEach(obj *gabs.Container, loops []loopTuple) *gabs.Container {
     wrapped := gabs.New()
     wrapped.Array("result")
 
-    if len(loops) == 0 {
-        wrapped.ArrayOfSize(1, "result")
-        wrapped.ArrayAppend(obj.Data(), "result")
-    } else if len(loops) == 1 {
-        arrayObj := obj.Path(loops[0].Foreach)
-        array, _ := arrayObj.Children()
+    forEachObj := obj.Path(loops[0].ForEach)
 
-        for _, element := range array {
-            newObj := gabs.New()
-            newObj.Set(element.Data(), loops[0].Asitem)
-            wrapped.ArrayAppend(newObj.Data(), "result")
+    if len(loops) == 1 {
+        forEachArray, _ := forEachObj.Children()
+
+        for _, element := range forEachArray {
+            elementObj := gabs.New()
+            elementObj.Set(element.Data(), loops[0].AsItem)
+            wrapped.ArrayAppend(elementObj.Data(), "result")
+        }
+    } else {
+        forEachArray, _ := forEachObj.Children()
+        for _, element := range forEachArray {
+            elementObj := gabs.New()
+            elementObj.Set(element.Data(), loops[0].AsItem)
+
+            printableObj := runForEach(elementObj, loops[1:])
+            printableArr, _ := printableObj.Children()
+            for _, item := range printableArr {
+                wrapped.ArrayAppend(item.Data(), "result")
+            }
         }
     }
 

@@ -1,10 +1,13 @@
 package main
 
 import (
+    "encoding/json"
     "fmt"
     "io/ioutil"
     "log"
     "os"
+    "reflect"
+    "strings"
 
     "github.com/Jeffail/gabs"
     "github.com/codegangsta/cli"
@@ -74,7 +77,13 @@ func main() {
                 printableArr, _ := printableObj.Children()
 
                 for _, element := range printableArr {
-                    fmt.Println(element.Path(c.Args().First()).String())
+                    output := element.Path(c.Args().First()).Data()
+                    if strings.HasPrefix(reflect.TypeOf(output).String(), "map") {
+                        outputString, _ := json.Marshal(output)
+                        fmt.Println(string(outputString))
+                    } else {
+                        fmt.Println(output)
+                    }
                 }
             },
         },
